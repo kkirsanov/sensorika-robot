@@ -14,5 +14,3 @@ def getWifi():
     return 0
 
 worker.mkPeriodicWorker("wifi", getWifi)
-
-print("Asd")
