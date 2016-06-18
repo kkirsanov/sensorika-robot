@@ -6,7 +6,7 @@ python3, pyzmq
 
 ## Excample Usage
 1) Create simpe sensor application:
-'
+```
 from sensorika import worker
 import subprocess
 
@@ -23,12 +23,12 @@ def getWifi():
     return 0
 
 worker.mkPeriodicWorker("wifi", getWifi)
-'
+```
 
-2) Remotly read data from it!
-'
+2) Remotely read data from it!
+```
 from sensorika import Connector
 
 c = Connector("127.0.0.1", 35741, 'wifi')
 print(c.get())
-'
+```
