@@ -4,7 +4,7 @@ Lightweight python middleware libriry for mechatronics components
 ## requirements
 python3, pyzmq
 
-## Excample Usage
+## Example Usage
 1) Create simpe sensor application:
 ```
 from sensorika import worker
@@ -25,10 +25,15 @@ def getWifi():
 worker.mkPeriodicWorker("wifi", getWifi)
 ```
 
-2) Remotely read data from it!
+3) Run it and watch for output:
+```
+Serving at 45181
+```
+
+3) Read data from it!
 ```
 from sensorika import Connector
 
-c = Connector("127.0.0.1", 35741, 'wifi')
+c = Connector("127.0.0.1", 45181, 'wifi')
 print(c.get())
 ```
