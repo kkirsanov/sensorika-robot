@@ -13,4 +13,4 @@ def getWifi():
                 return 0
     return 0
 
-worker.mkPeriodicWorker("wifi", getWifi)
+worker.mkPeriodicWorker("wifi", getWifi,dict(frequency=1.0))

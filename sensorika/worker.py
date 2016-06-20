@@ -5,7 +5,7 @@ import  logging
 from sensorika.tools import getLocalIp
 import json
 class Worker(threading.Thread):
-    def __init__(self, name, *args, **kwargs):
+    def __init__(self, name, configFile=None, *args, **kwargs):
         self.Estop = threading.Event()
         threading.Thread.__init__(self,args=args, kwargs=args)
         self.src = ""
@@ -20,18 +20,31 @@ class Worker(threading.Thread):
         self.data = [(time.time(), 0)]
         self.wcontext = zmq.Context()
         self.wsocket = self.wcontext.socket(zmq.REP)
+        self._configFile = name
+        self.ptimer = threading.Timer(10.0, self.populate)
+
+        if configFile:
+            self._configFile = configFile
         try:
-            f = open('{0}.state'.format(self.name), "r")
-            txt = f.readline()
-            self.port = int(txt)
-            self.wsocket.bind("tcp://*:{0}".format(self.port))
+            f = open(self._configFile, "r")
+        except IOError as e:
+            print('Creating config File with random port')
+            self.port = self.wsocket.bind_to_random_port("tcp://*")
+            self.params = {}
+            self.params['port']=self.port
+            self.params['frequency'] = 10
+            self.params['name'] = name
+            f=open(self._configFile ,"w")
+            f.write(json.dumps(self.params))
+            f.close()
+
+        try:
+            self.params=json.load(f)
+            self.wsocket.bind("tcp://*:{0}".format(self.params.port))
         except Exception as e:
             print(e)
-            self.port = self.wsocket.bind_to_random_port("tcp://*")
-            f = open('{0}.state'.format(self.name), "w")
-            f.write(str(self.port))
-            f.close()
-        self.ptimer = threading.Timer(10.0, self.populate)
+            return
+
         self.ptimer.start()
         print("Serving at {0}".format(self.port))
         self.start()
@@ -117,13 +130,14 @@ class Worker(threading.Thread):
         self.Estop.set()
         self.ptimer.cancel()
 
-def mkPeriodicWorker(name, function, params={}):
-    w = Worker(name)
+def mkPeriodicWorker(name, function, configFile=None, params={}):
+    w = Worker(name, configFile)
+    w.params.update(params)
     def W():
         while not w.Estop.is_set():
             result = function()
             w.add(result)
-            time.sleep(1)
+            time.sleep(1.0/w.params['frequency'])
             print(result)
     t = threading.Thread(target=W)
     t.start()
