@@ -1,5 +1,7 @@
 import datetime
+import threading
 import time
+
 import zmq
 
 
@@ -13,6 +15,8 @@ class Connector:
         self.dataReady = False
         t = str(datetime.datetime.now())
         self.cache = None
+
+        self.Estop = threading.Event()
 
     def get(self, dt=0.05):
         if (self.t0 + dt > time.time()) and (self.dataReady):
