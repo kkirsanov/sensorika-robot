@@ -1,9 +1,13 @@
-
-import time, datetime, threading
-import json, zmq
-import  logging
-from sensorika.tools import getLocalIp
 import json
+import  logging
+import threading
+import time
+
+import zmq
+
+from sensorika.tools import getLocalIp
+
+
 class Worker(threading.Thread):
     def __init__(self, name, configFile=None, *args, **kwargs):
         self.Estop = threading.Event()
@@ -21,7 +25,7 @@ class Worker(threading.Thread):
         self.wcontext = zmq.Context()
         self.wsocket = self.wcontext.socket(zmq.REP)
         self._configFile = name
-        self.ptimer = threading.Timer(10.0, self.populate)
+        self.ptimer = threading.Timer(2.0, self.populate)
 
         if configFile:
             self._configFile = configFile
@@ -40,26 +44,30 @@ class Worker(threading.Thread):
 
         try:
             self.params=json.load(f)
-            self.wsocket.bind("tcp://*:{0}".format(self.params.port))
+            self.wsocket.bind("tcp://*:{0}".format(self.params['port']))
         except Exception as e:
             print(e)
             return
 
         self.ptimer.start()
-        print("Serving at {0}".format(self.port))
+        print("Serving at {0}".format(self.params['port']))
         self.start()
     def populate(self):
         logging.debug('populating')
         ctx = zmq.Context()
         sock = ctx.socket(zmq.REQ)
-        s = "tcp://" + self.ns_ip + ":" + str(self.port)
+        s = "tcp://" + self.ns_ip + ":15701"
 
         poller = zmq.Poller()
-        poller.register(sock, zmq.POLLIN)
-        if poller.poll(5 * 1000):  # 10s timeout in milliseconds
-            sock.connect(s)
-            sock.send_json(dict(action='register', name=self.name, port=self.port, ip=self.ns_ip))
-            z = sock.recv_json()
+        poller.register(sock, zmq.POLLIN | zmq.POLLOUT)
+        sock.connect(s)
+        if poller.poll(3 * 1000):  # 10s timeout in milliseconds
+            sock.send_json(dict(action='register', name=self.name, port=self.params['port'], ip=self.ns_ip))
+        else:
+            logging.error("No locator on {0}:{1}".format(self.ns_ip, 15701))
+
+        if poller.poll(3 * 1000):  # 10s timeout in milliseconds
+            sock.recv_json()
         else:
             logging.error("No locator on {0}:{1}".format(self.ns_ip, 15701))
 
@@ -77,7 +85,6 @@ class Worker(threading.Thread):
         return data
 
     def get(self, cnt=1):
-        import types
         try:
             return self.command[-cnt:]
         except:
