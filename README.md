@@ -1,5 +1,6 @@
 # sensorika-robot
-Lightweight python middleware libriry for mechatronics components
+Lightweight python middleware libriry of data exchange between mechatronics components.
+Sitable for mobile robotics and remote control.
 
 ## requirements
 python3, pyzmq
