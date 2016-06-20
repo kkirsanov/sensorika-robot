@@ -9,12 +9,15 @@ PORT = 15701
 
 
 class Locator(threading.Thread):
+    def __init__(self,*a,**k):
+        threading.Thread.__init__(self, args=a, kwargs=k)
+        self.EStop = threading.Event()
+
+
     def stop(self,*p1, **p2):
-        #print(p1,p2)
-        self.canGo = False
+        self.EStop.set()
 
     def run(self):
-        self.isStopped = False
 
         logging.debug("Starting nameserver on {0}:{1}".format(getLocalIp(), str(PORT)))
         time.sleep(1)
@@ -30,7 +33,7 @@ class Locator(threading.Thread):
         programs = {}
         counter = 0
 
-        while self.canGo:
+        while not self.EStop.is_set():
             data = {}
             logging.debug('tick')
             try:
@@ -74,7 +77,6 @@ class Locator(threading.Thread):
         context.term()
         time.sleep(0.01)
         logging.debug("closing")
-        self.isStopped = True
 
     def serve(self):
         signal.signal(signal.SIGINT, self.stop)
