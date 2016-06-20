@@ -1,5 +1,5 @@
 import json
-import  logging
+import logging
 import threading
 import time
 
@@ -11,11 +11,11 @@ from sensorika.tools import getLocalIp
 class Worker(threading.Thread):
     def __init__(self, name, configFile=None, *args, **kwargs):
         self.Estop = threading.Event()
-        threading.Thread.__init__(self,args=args, kwargs=args)
+        threading.Thread.__init__(self, args=args, kwargs=args)
         self.src = ""
         self.command = []
         time.sleep(0.1)
-        self.name=name
+        self.name = name
         self.dt = 0.001
         self.ns_ip = getLocalIp()
         self.name = name
@@ -35,15 +35,15 @@ class Worker(threading.Thread):
             print('Creating config File with random port')
             self.port = self.wsocket.bind_to_random_port("tcp://*")
             self.params = {}
-            self.params['port']=self.port
+            self.params['port'] = self.port
             self.params['frequency'] = 10
             self.params['name'] = name
-            f=open(self._configFile ,"w")
+            f = open(self._configFile, "w")
             f.write(json.dumps(self.params))
             f.close()
 
         try:
-            self.params=json.load(f)
+            self.params = json.load(f)
             self.wsocket.bind("tcp://*:{0}".format(self.params['port']))
         except Exception as e:
             print(e)
@@ -52,6 +52,7 @@ class Worker(threading.Thread):
         self.ptimer.start()
         print("Serving at {0}".format(self.params['port']))
         self.start()
+
     def populate(self):
         logging.debug('populating')
         ctx = zmq.Context()
@@ -62,7 +63,8 @@ class Worker(threading.Thread):
         poller.register(sock, zmq.POLLIN | zmq.POLLOUT)
         sock.connect(s)
         if poller.poll(3 * 1000):  # 10s timeout in milliseconds
-            sock.send_json(dict(action='register', name=self.name, port=self.params['port'], ip=self.ns_ip))
+            sock.send_json(dict(action='register', name=self.name, port=self.params['port'],
+                                ip=self.ns_ip, params=self.params))
         else:
             logging.error("No locator on {0}:{1}".format(self.ns_ip, 15701))
 
@@ -74,7 +76,7 @@ class Worker(threading.Thread):
         sock.close()
         ctx.term()
         if not self.Estop.is_set():
-            self.ptimer = threading .Timer(10.0, self.populate)
+            self.ptimer = threading.Timer(10.0, self.populate)
             self.ptimer.start()
 
     def add(self, data):
@@ -82,6 +84,8 @@ class Worker(threading.Thread):
         self.command.append((time.time(), data))
         if len(self.data) > 100:
             self.data = self.data[-100:]
+        if len(self.command) > 100:
+            self.command = self.data[-100:]
         return data
 
     def get(self, cnt=1):
@@ -97,7 +101,7 @@ class Worker(threading.Thread):
 
         try:
             while True:
-                if self.Estop .is_set():
+                if self.Estop.is_set():
                     break
 
                 try:
@@ -137,15 +141,18 @@ class Worker(threading.Thread):
         self.Estop.set()
         self.ptimer.cancel()
 
+
 def mkPeriodicWorker(name, function, configFile=None, params={}):
     w = Worker(name, configFile)
     w.params.update(params)
+
     def W():
         while not w.Estop.is_set():
             result = function()
             w.add(result)
-            time.sleep(1.0/w.params['frequency'])
+            time.sleep(1.0 / w.params['frequency'])
             print(result)
+
     t = threading.Thread(target=W)
     t.start()
     return w
