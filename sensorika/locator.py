@@ -1,11 +1,10 @@
-import datetime
 import json
 import logging
 import signal
-import sqlite3
 import threading
 import time
 
+import plyvel
 import zmq
 
 from .connector import Connector
@@ -66,51 +65,18 @@ class ThreadedConnector(threading.Thread):
         self.Estop.set()
 
 
-class DatabaserSQLITE():
-    def __init__(self):
-        self.db = sqlite3.connect("data.db")
-        cursor = self.db.cursor()
-        cursor.execute(
-            "CREATE TABLE IF NOT EXISTS session (id INTEGER PRIMARY KEY  AUTOINCREMENT, name CHAR(60), date datetime);")
-        cursor.execute(
-            "CREATE TABLE IF NOT EXISTS data (id INTEGER PRIMARY KEY  AUTOINCREMENT, session INTEGER, data TEXT, date datetime);")
-        self.db.commit()
-
-    def statSession(self, name):
-        cur = self.db.cursor()
-        sql = "insert into session(name, date) values(?, date('now'))"
-        cur.execute(sql, [name])
-
-        self.db.commit()
-        return cur.lastrowid
-
-    def add(self, session, data):
-        cur = self.db.cursor()
-        sql = "insert into data(session, data, date) values(?, ?, date('now'))"
-        a = cur.execute(sql, [session, data])
-        # self.db.commit()
-        return cur.lastrowid
-
-    def commit(self):
-        self.db.commit()
-
-
-import plyvel
-
-
-def curdate():
-    return datetime.datetime.now().strftime("%Y-%m-%d %H:%m:%S")
-
-
 class DatabaserLEVELDB():
     def __init__(self):
         self.db = plyvel.DB('./db', create_if_missing=True)
 
+    def close(self):
+        return self.db.close()
     def statSession(self, name):
-        self.db.put("session_{0}_{1}".format(name, time.time()).encode('utf8'), b'ok')
+        self.db.put("session|{1}|{1}".format(name, time.time()).encode('utf8'), b'ok')
 
     def add(self, name, data):
         self.db.put("{0}-{1}".format(name, time.time()).encode('utf8'), json.dumps(data).encode("utf8"))
+
 
 
 class Locator(threading.Thread):
@@ -180,6 +146,9 @@ class Locator(threading.Thread):
                     for k, v in self.programs.items():
                         d.append(dict(name=k, data=v['params']))  # TODO: Fix, couse` ThreadedConnector is not json
                     socket.send_json(d)
+                    continue
+                if data['action'] == 'listsessions':
+                    socket.send_json(self.db.getSessions())
                     continue
                 if data['action'] == 'get':
                     if 'count' not in data.keys():
