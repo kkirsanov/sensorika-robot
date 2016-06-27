@@ -111,25 +111,34 @@ class Worker(threading.Thread):
                     continue
 
                 data = json.loads(data)
+                senddata = None
                 try:
                     if data['action'] == 'call':
                         pass
                     if data['action'] == 'source':
                         if self.src:
-                            self.wsocket.send_json(dict(source=self.src))
+                            senddata = dict(source=self.src)
                     if data['action'] == 'line':
                         if self.src:
-                            self.wsocket.send_json(dict(line=self.src_line))
+                            senddata = dict(line=self.src_line)
 
                     if data['action'] == 'get':
-                        self.wsocket.send_json(self.data[-1])
+                        senddata = self.data[-1]
                     if data['action'] == 'set':
                         self.command.append((time.time(), data['data']))
-                        self.wsocket.send_json(dict(status='ok'))
+                        senddata = dict(status='ok')
                 except Exception as e:
                     print(e)
+                    sneddata = None
                     self.wsocket.send_json(dict(status='wrong params'))
+                try:
+                    self.wsocket.send_json(senddata)
+                except Exception as e:
+                    print(e)
+
+
                 time.sleep(self.dt)
+
             self.wsocket.close()
             self.wcontext.term()
         except Exception as e:
