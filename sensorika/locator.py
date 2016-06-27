@@ -1,3 +1,4 @@
+import datetime
 import json
 import logging
 import signal
@@ -72,6 +73,7 @@ class DatabaserLEVELDB():
     def close(self):
         if not self.db.closed:
             self.db.close()
+
     def statSession(self, name):
         self.db.put("session|{1}|{0}".format(name, time.time()).encode('utf8'), b'ok')
 
@@ -79,10 +81,43 @@ class DatabaserLEVELDB():
         if not self.db.closed:
             self.db.put("{0}-{1}".format(name, time.time()).encode('utf8'), json.dumps(data).encode("utf8"))
 
-    def getSessions(self):
+    def getSessions(self, datefrom=None, dateto=None):
+        df = b"0"
+        dt = str(time.mktime(datetime.datetime.now().timetuple())).encode("utf8")
+        if datefrom:
+            df = str(time.mktime(datefrom.timetuple())).encode("utf8")
+        if dateto:
+            dt = str(time.mktime(dateto.timetuple())).encode("utf8")
         d = []
-        for k, v in self.db.iterator(start=b'session', stop=b'session.'):
-            d.append(k)
+        for k, v in self.db.iterator(start=b'session|' + df, stop=b'session|' + dt, reverse=True):
+            d.append(k.decode('utf8').split('|')[1:])
+            d[-1][0] = datetime.datetime.fromtimestamp(float(d[-1][0]))
+        return d
+
+    def getdata(self, name, datefrom=None, dateto=None, limit=1000):
+
+        df = b"0"
+        dt = str(time.mktime(datetime.datetime.now().timetuple())).encode("utf8")
+        if datefrom:
+            df = str(time.mktime(datefrom.timetuple())).encode("utf8")
+        if dateto:
+            dt = str(time.mktime(dateto.timetuple())).encode("utf8")
+
+        d = []
+        l = 0
+        for k, v in self.db.iterator(start=name.encode('utf8') + b"-" + df,
+                                     stop=name.encode('utf8') + b"-" + dt, reverse=True):
+            dbtime = float(k.decode('utf8').split("-")[1])
+            # d.append([k.decode('utf8'), v.decode('utf8')])
+            data = json.loads(v.decode('utf8'))
+            # d[-1][0]=float(d[-1][0].split("-")[1])
+            # d[-1][1]=json.loads(d[-1][1])
+            d.append(data)
+            d[-1][0] = [dbtime] + d[-1][0]
+            l += 1
+            if l >= limit:
+                break
+
         return d
 
 
@@ -154,8 +189,26 @@ class Locator(threading.Thread):
                         d.append(dict(name=k, data=v['params']))  # TODO: Fix, couse` ThreadedConnector is not json
                     socket.send_json(d)
                     continue
-                if data['action'] == 'listsessions':
-                    socket.send_json(self.db.getSessions())
+                if data['action'] == 'getsessions':
+                    df = None
+                    dt = None
+                    if 'df' in data.keys():
+                        df = data['df']
+                    if 'dt' in data.keys():
+                        dt = data['dt']
+                    socket.send_json(self.db.getSessions(datefrom=df, dateto=dt))
+                    continue
+                if data['action'] == 'getdata':
+                    df = None
+                    dt = None
+                    limit = 10
+                    if 'df' in data.keys():
+                        df = data['df']
+                    if 'dt' in data.keys():
+                        dt = data['dt']
+                    if 'limit' in data.keys():
+                        limit = data['limit']
+                    socket.send_json(self.db.getdata(name=data['name'], datefrom=df, dateto=dt, limit=limit))
                     continue
                 if data['action'] == 'get':
                     if 'count' not in data.keys():
