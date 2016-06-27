@@ -72,14 +72,16 @@ class DatabaserLEVELDB():
     def close(self):
         return self.db.close()
     def statSession(self, name):
-        self.db.put("session|{1}|{1}".format(name, time.time()).encode('utf8'), b'ok')
+        self.db.put("session|{1}|{0}".format(name, time.time()).encode('utf8'), b'ok')
 
     def add(self, name, data):
         self.db.put("{0}-{1}".format(name, time.time()).encode('utf8'), json.dumps(data).encode("utf8"))
 
     def getSessions(self):
-        for k, v in self.db.iterator(start=b'session|', stop=b'session|'):
-            print(k)
+        d = []
+        for k, v in self.db.iterator(start=b'session', stop=b'session.'):
+            d.append(k)
+        return d
 
 
 class Locator(threading.Thread):
