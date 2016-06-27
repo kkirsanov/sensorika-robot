@@ -70,12 +70,14 @@ class DatabaserLEVELDB():
         self.db = plyvel.DB('./db', create_if_missing=True)
 
     def close(self):
-        return self.db.close()
+        if not self.db.closed:
+            self.db.close()
     def statSession(self, name):
         self.db.put("session|{1}|{0}".format(name, time.time()).encode('utf8'), b'ok')
 
     def add(self, name, data):
-        self.db.put("{0}-{1}".format(name, time.time()).encode('utf8'), json.dumps(data).encode("utf8"))
+        if not self.db.closed:
+            self.db.put("{0}-{1}".format(name, time.time()).encode('utf8'), json.dumps(data).encode("utf8"))
 
     def getSessions(self):
         d = []
