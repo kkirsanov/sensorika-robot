@@ -77,6 +77,9 @@ class DatabaserLEVELDB():
     def add(self, name, data):
         self.db.put("{0}-{1}".format(name, time.time()).encode('utf8'), json.dumps(data).encode("utf8"))
 
+    def getSessions(self):
+        for k, v in self.db.iterator(start=b'session|', stop=b'session|'):
+            print(k)
 
 
 class Locator(threading.Thread):
