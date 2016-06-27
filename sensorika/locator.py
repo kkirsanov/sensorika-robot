@@ -1,5 +1,8 @@
+import datetime
+import json
 import logging
 import signal
+import sqlite3
 import threading
 import time
 
@@ -18,17 +21,24 @@ class Planner(threading.Thread):
 
 
 class ThreadedConnector(threading.Thread):
-    def __init__(self, ip, port, params=None, *args, **kwargs):
+    def __init__(self, ip, port, params=None, database=None, *args, **kwargs):
         threading.Thread.__init__(self, args=args, kwargs=args)
-        print("new stream started")
-        if params:
-            self.params = params
-        else:
-            self.params = dict(frequency=1.0)
-        self.Estop = threading.Event()
-        self.connector = Connector(ip, port)
-        self.data = []
-        self.thread = self.start()
+        try:
+            if params:
+                self.params = params
+            else:
+                import random
+                self.params = dict(frequency=1.0, name='none_{0}'.format(random.randint(0, 1000)))
+            self.Estop = threading.Event()
+            self.connector = Connector(ip, port)
+            self.data = []
+
+            self.db = database
+            self.name = self.params['name']
+            self.db.statSession(self.name)
+            self.thread = self.start()
+        except Exception as e:
+            print(e)
 
     def run(self):
         while not self.Estop.is_set():
@@ -48,9 +58,59 @@ class ThreadedConnector(threading.Thread):
                     self.data.append(([time.time()] + [t], d))
                 else:
                     self.data.append(([time.time()] + t, d))
+                self.db.add(self.name, self.data[-1])
+            if len(self.data) > 100:
+                self.data = self.data[-100:]
 
     def stop(self):
         self.Estop.set()
+
+
+class DatabaserSQLITE():
+    def __init__(self):
+        self.db = sqlite3.connect("data.db")
+        cursor = self.db.cursor()
+        cursor.execute(
+            "CREATE TABLE IF NOT EXISTS session (id INTEGER PRIMARY KEY  AUTOINCREMENT, name CHAR(60), date datetime);")
+        cursor.execute(
+            "CREATE TABLE IF NOT EXISTS data (id INTEGER PRIMARY KEY  AUTOINCREMENT, session INTEGER, data TEXT, date datetime);")
+        self.db.commit()
+
+    def statSession(self, name):
+        cur = self.db.cursor()
+        sql = "insert into session(name, date) values(?, date('now'))"
+        cur.execute(sql, [name])
+
+        self.db.commit()
+        return cur.lastrowid
+
+    def add(self, session, data):
+        cur = self.db.cursor()
+        sql = "insert into data(session, data, date) values(?, ?, date('now'))"
+        a = cur.execute(sql, [session, data])
+        # self.db.commit()
+        return cur.lastrowid
+
+    def commit(self):
+        self.db.commit()
+
+
+import plyvel
+
+
+def curdate():
+    return datetime.datetime.now().strftime("%Y-%m-%d %H:%m:%S")
+
+
+class DatabaserLEVELDB():
+    def __init__(self):
+        self.db = plyvel.DB('./db', create_if_missing=True)
+
+    def statSession(self, name):
+        self.db.put("session_{0}_{1}".format(name, time.time()).encode('utf8'), b'ok')
+
+    def add(self, name, data):
+        self.db.put("{0}-{1}".format(name, time.time()).encode('utf8'), json.dumps(data).encode("utf8"))
 
 
 class Locator(threading.Thread):
@@ -58,11 +118,13 @@ class Locator(threading.Thread):
         threading.Thread.__init__(self, args=a, kwargs=k)
         self.programs = dict()
         self.EStop = threading.Event()
+        self.db = DatabaserLEVELDB()
 
     def stop(self, *p1, **p2):
         for k, v in self.programs.items():
             v['con'].stop()
             self.EStop.set()
+        self.db.close()
         print("STOP!")
 
     def run(self):
@@ -104,10 +166,13 @@ class Locator(threading.Thread):
                         if self.programs[data['name']]['port'] != data['port']:
                             self.programs[data['name']]['params'] = data['params']
                             self.programs[data['name']]['con'].stop()
-                            self.programs[data['name']]['con'] = ThreadedConnector(data['ip'], data['port'])
+                            self.programs[data['name']]['con'] = ThreadedConnector(data['ip'], data['port'],
+                                                                                   database=self.db,
+                                                                                   params=data['params'])
                     else:
                         self.programs[data['name']] = dict(time=time.time(), params=data['params'])
-                        self.programs[data['name']]['con'] = ThreadedConnector(data['ip'], data['port'])
+                        self.programs[data['name']]['con'] = ThreadedConnector(data['ip'], data['port'],
+                                                                               database=self.db, params=data['params'])
                     socket.send_json(dict(status='ok'))
                     continue
                 if data['action'] == 'list':
