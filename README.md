@@ -1,12 +1,12 @@
 # sensorika-robot
-Lightweight python middleware libriry of data exchange between mechatronics components.
+Lightweight python middleware library for data exchange between mechatronics components.
 Sitable for mobile robotics and remote control.
 
-## requirements
+## Requirements
 python3, pyzmq
 
 ## Example Usage
-1) Create simpe sensor application:
+1) Create simple sensor application:
 ```
 from sensorika import worker
 import subprocess
