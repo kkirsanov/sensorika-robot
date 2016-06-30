@@ -29,7 +29,7 @@ class Worker(threading.Thread):
         self.data = [(time.time(), 0)]
         self.wcontext = zmq.Context()
         self.wsocket = self.wcontext.socket(zmq.REP)
-        self._configFile = name
+        self._configFile = "." + name
         self.ptimer = threading.Timer(2.0, self.populate)
 
         if configFile:
