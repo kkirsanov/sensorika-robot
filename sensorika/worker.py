@@ -141,7 +141,6 @@ class Worker(threading.Thread):
                 except Exception as e:
                     print(e)
 
-
                 time.sleep(self.dt)
 
             self.wsocket.close()
@@ -156,16 +155,19 @@ class Worker(threading.Thread):
         self.ptimer.cancel()
 
 
-def mkPeriodicWorker(name, function, configFile=None, params={}):
+def mkPeriodicWorker(name, function, params={}, configFile=None):
     w = Worker(name, configFile)
     w.params.update(params)
+    spd = 1.0 / w.params['frequency']
 
     def W():
         while not w.Estop.is_set():
+            t0 = time.time()
             result = function()
             w.add(result)
-            time.sleep(1.0 / w.params['frequency'])
-            print(result)
+            tt = time.time() - t0
+            time.sleep(spd - tt)
+            # print(result)
 
     t = threading.Thread(target=W)
     t.start()
