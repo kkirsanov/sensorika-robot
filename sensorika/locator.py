@@ -47,7 +47,7 @@ class ThreadedConnector(threading.Thread):
 
     def run(self):
         while not self.Estop.is_set():
-            time.sleep(1 / self.params['frequency'])
+            t0 = time.time()
 
             data = self.connector.get()
             t, d = data
@@ -66,6 +66,9 @@ class ThreadedConnector(threading.Thread):
                 self.db.add(self.name, self.data[-1])
             if len(self.data) > 100:
                 self.data = self.data[-100:]
+
+            dt = time.time() - t0
+            time.sleep(1 / self.params['frequency'])
 
     def stop(self):
         self.Estop.set()
