@@ -1,6 +1,3 @@
-try:
-    from .locator import Locator
-except:
-    pass
 from .connector import Connector
+from .locator import Locator
 from .worker import Worker
