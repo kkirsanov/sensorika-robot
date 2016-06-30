@@ -1,4 +1,9 @@
-import json
+try:
+    import ujson as json
+except:
+    print('ujson not found, using json')
+    import json
+
 import logging
 import threading
 import time
