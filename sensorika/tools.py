@@ -35,3 +35,18 @@ def tryConnect(ip=getLocalIp(), port=PORT, timeout=4, dt=0.01):
     socket.close()
     context.term()
     return ok
+
+def list(ns_ip=getLocalIp(), name=""):
+    lcontext = zmq.Context()
+    lsocket = lcontext.socket(zmq.REQ)
+    lsocket.connect("tcp://" + ns_ip + ":" + str(PORT))
+    lsocket.send_json(dict(action='list'))
+    d = lsocket.recv_json(); lsocket.close()
+    ret = []
+    if name:
+        for x in d:
+            if x['name'].lower() == name.lower():
+                ret.append(x)
+        return ret
+    else:
+        return d
