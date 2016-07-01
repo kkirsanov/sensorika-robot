@@ -3,7 +3,7 @@ Lightweight python middleware library for data exchange between mechatronics com
 Sitable for mobile robotics and remote control.
 
 ## Requirements
-python3, pyzmq, plyvel(leveldb)
+python2/3, pyzmq, plyvel(for leveldb), inputs (for joystic), ujson (for better perfomance)
 
 ## Example Usage
 1) Create simple sensor application:
