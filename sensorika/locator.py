@@ -18,13 +18,6 @@ from .tools import getLocalIp
 
 PORT = 15701
 
-
-class Planner(threading.Thread):
-    def __init__(self, programs, *a, **k):
-        threading.Thread.__init__(self, args=a, kwargs=k)
-        self.programs = programs
-
-
 class ThreadedConnector(threading.Thread):
     def __init__(self, ip, port, params=None, database=None, *args, **kwargs):
         threading.Thread.__init__(self, args=args, kwargs=args)
