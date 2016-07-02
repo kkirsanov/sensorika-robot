@@ -6,7 +6,7 @@ import zmq
 
 
 class Connector:
-    def __init__(self, ip, port, name=""):
+    def __init__(self, ip, port=15701, name=""):
         self.context = zmq.Context()
         self.socket = self.context.socket(zmq.REQ)
         self.addr = "tcp://" + ip + ":" + str(port)
