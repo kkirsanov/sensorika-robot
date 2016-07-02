@@ -92,7 +92,7 @@ class DatabaserLEVELDB():
         d = []
         for k, v in self.db.iterator(start=b'session|' + df, stop=b'session|' + dt, reverse=True):
             d.append(k.decode('utf8').split('|')[1:])
-            d[-1][0] = datetime.datetime.fromtimestamp(float(d[-1][0]))
+            d[-1][0] = str(datetime.datetime.fromtimestamp(float(d[-1][0])))
         return d
 
     def getdata(self, name, datefrom=None, dateto=None, limit=1000):
