@@ -249,3 +249,6 @@ def serve():
     signal.signal(signal.SIGTERM, l.stop)
     print('Serving at {0}'.format(PORT))
     l.start()
+
+if __name__ == "__main__":
+    serve()
