@@ -131,6 +131,8 @@ class Worker(threading.Thread):
                         senddata = self.data[-1]
                     if data['action'] == 'set':
                         self.command.append((time.time(), data['data']))
+                        if len(self.command) > 100:
+                            self.command = self.data[-100:]
                         senddata = dict(status='ok')
                 except Exception as e:
                     print(e)
