@@ -86,11 +86,10 @@ class Worker(threading.Thread):
 
     def add(self, data):
         self.data.append((time.time(), data))
-        self.command.append((time.time(), data))
+
         if len(self.data) > 100:
             self.data = self.data[-100:]
-        if len(self.command) > 100:
-            self.command = self.data[-100:]
+
         return data
 
     def get(self, cnt=1):
@@ -132,7 +131,7 @@ class Worker(threading.Thread):
                     if data['action'] == 'set':
                         self.command.append((time.time(), data['data']))
                         if len(self.command) > 100:
-                            self.command = self.data[-100:]
+                            self.command = self.command[-100:]
                         senddata = dict(status='ok')
                 except Exception as e:
                     print(e)
