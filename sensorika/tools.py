@@ -1,5 +1,5 @@
 import json, zmq
-import  logging
+import logging
 import time
 
 PORT = 15701
@@ -36,7 +36,7 @@ def tryConnect(ip=getLocalIp(), port=PORT, timeout=4, dt=0.01):
     context.term()
     return ok
 
-def list(ns_ip=getLocalIp(), name=""):
+def nslist(ns_ip=getLocalIp(), name=""):
     lcontext = zmq.Context()
     lsocket = lcontext.socket(zmq.REQ)
     lsocket.connect("tcp://" + ns_ip + ":" + str(PORT))
