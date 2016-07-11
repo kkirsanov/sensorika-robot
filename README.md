@@ -1,5 +1,5 @@
 # sensorika-robot
-Lightweight python middleware library for data exchange between mechatronics components.
+Lightweight python middleware library for data exchange between mechatronics components in synchronous and asynchronous way.
 Sitable for mobile robotics and remote control.
 
 ## Requirements
@@ -28,7 +28,7 @@ worker.mkPeriodicWorker("wifi", getWifi)
 
 3) Run it and watch for output:
 ```
-Serving at 45181
+Serving at sync 41163 and async 37553
 ```
 
 3) Read data from it!
@@ -37,4 +37,18 @@ from sensorika import Connector
 
 c = Connector("127.0.0.1", 45181, 'wifi')
 print(c.get())
+```
+
+or
+```
+import time
+from sensorika import ConnectorAsync
+
+def prn(x):
+    print(x)
+
+c = ConnectorAsync("127.0.0.1", 37553, 'wifi', callback=prn)
+
+time.sleep(10)
+c.stop()
 ```
