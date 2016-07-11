@@ -36,3 +36,44 @@ class Connector:
     def stop(self):
         self.socket.setsockopt(zmq.LINGER, 0)
         self.socket.close()
+
+
+class ConnectorAsync(threading.Thread):
+    def __init__(self, ip, port=15701, name="", callback=None):
+
+        self.context = zmq.Context()
+        self.socket = self.context.socket(zmq.SUB)
+        self.socket.setsockopt(zmq.SUBSCRIBE, b'')
+
+        self.addr = "tcp://" + ip + ":" + str(port)
+        self.socket.connect(self.addr)
+
+        self.Estop = threading.Event()
+        self.callback = callback
+
+        super(ConnectorAsync, self).__init__()
+        self.start()
+
+    def run(self):
+        self.cache = [time.time(), None]
+        while not self.Estop.is_set():
+            try:
+                tmp = self.socket.recv_json(zmq.DONTWAIT)
+                if isinstance(tmp[0], float):
+                    tmp = [[time.time(), tmp[0]], tmp[1]]
+                else:
+                    tmp = [[time.time()] + tmp[0], tmp[1]]
+                self.cache = tmp
+                if self.callback:
+                    self.callback(self.cache)
+            except Exception as e:
+                time.sleep(0.01)
+
+                pass
+
+    def get(self, dt=0.05):
+        return self.cache
+
+    def stop(self):
+        self.Estop.set()
+        # self.socket.close()
