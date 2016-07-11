@@ -13,12 +13,12 @@ import time
 import plyvel
 import zmq
 
-from .connector import Connector
+from .connector import ConnectorAsync
 from .tools import getLocalIp
 
 PORT = 15701
 
-
+"""
 class ThreadedConnector(threading.Thread):
     def __init__(self, ip, port, params=None, database=None, *args, **kwargs):
         threading.Thread.__init__(self, args=args, kwargs=args)
@@ -66,6 +66,38 @@ class ThreadedConnector(threading.Thread):
 
     def stop(self):
         self.Estop.set()
+"""
+
+
+class ConnectorAsyncDB():
+    def __init__(self, ip, port, params, database):
+        self.db = database
+        self.params = params
+        self.data = []
+        self.db.statSession(params['name'])
+
+        self.connector = ConnectorAsync(ip, port, callback=self.add)
+
+    def add(self, data):
+        t, d = data
+        canAdd = False
+        if self.data:
+            if self.data[-1][0] != t:
+                canAdd = True
+        else:
+            canAdd = True
+        if canAdd:
+            if isinstance(t, float):
+                self.data.append(([time.time()] + [t], d))
+            else:
+                self.data.append(([time.time()] + t, d))
+
+            self.db.add(self.name, self.data[-1])
+            if len(self.data) > 100:
+                self.data = self.data[-100:]
+
+    def stop(self):
+        self.connector.stop()
 
 
 class DatabaserLEVELDB():
@@ -186,13 +218,12 @@ class Locator(threading.Thread):
                         if self.programs[data['name']]['port'] != data['port']:
                             self.programs[data['name']]['params'] = data['params']
                             self.programs[data['name']]['con'].stop()
-                            self.programs[data['name']]['con'] = ThreadedConnector(data['ip'], data['port'],
-                                                                                   database=self.db,
-                                                                                   params=data['params'])
+                            self.programs[data['name']]['con'] = ConnectorAsyncDB(data['ip'], data['async_port'],
+                                                                                  data['params'], self.db)
                     else:
                         self.programs[data['name']] = dict(time=time.time(), params=data['params'])
-                        self.programs[data['name']]['con'] = ThreadedConnector(data['ip'], data['port'],
-                                                                               database=self.db, params=data['params'])
+                        self.programs[data['name']]['con'] = ConnectorAsyncDB(data['ip'], data['async_port'],
+                                                                              data['params'], self.db)
                     answer = dict(status='ok')
                 if data['action'] == 'list':
                     d = []
