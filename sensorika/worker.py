@@ -55,11 +55,8 @@ class Worker(threading.Thread):
         if need_create:
             try:
                 self.params = json.load(open(self._configFile, "r"))
-                print("1")
                 self.sync_socket.bind("tcp://*:{0}".format(self.params['port']))
-                print("2")
                 self.async_socket.bind("tcp://*:{0}".format(self.params['async_port']))
-                print("3")
             except Exception as e:
                 print(e)
                 return
