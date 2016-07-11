@@ -56,8 +56,14 @@ class ConnectorAsync(threading.Thread):
 
     def run(self):
         self.cache = [time.time(), None]
+        poller = zmq.Poller()
+        poller.register(self.socket, zmq.POLLIN)
         while not self.Estop.is_set():
             try:
+                socks = dict(poller.poll(1000))
+            except KeyboardInterrupt:
+                break
+            if self.socket in socks:
                 tmp = self.socket.recv_json(zmq.DONTWAIT)
                 if isinstance(tmp[0], float):
                     tmp = [[time.time(), tmp[0]], tmp[1]]
@@ -66,10 +72,7 @@ class ConnectorAsync(threading.Thread):
                 self.cache = tmp
                 if self.callback:
                     self.callback(self.cache)
-            except Exception as e:
-                time.sleep(0.01)
 
-                pass
 
     def get(self, dt=0.05):
         return self.cache
