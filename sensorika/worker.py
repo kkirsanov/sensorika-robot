@@ -28,34 +28,44 @@ class Worker(threading.Thread):
         self.lastSSend = time.time()
         self.data = [(time.time(), 0)]
         self.wcontext = zmq.Context()
-        self.wsocket = self.wcontext.socket(zmq.REP)
+        self.sync_socket = self.wcontext.socket(zmq.REP)
+        self.async_socket = self.wcontext.socket(zmq.PUB)
         self._configFile = "." + name
         self.ptimer = threading.Timer(2.0, self.populate)
 
         if configFile:
             self._configFile = configFile
+        need_create = True
         try:
             f = open(self._configFile, "r")
         except IOError as e:
             print('Creating config File with random port')
-            self.port = self.wsocket.bind_to_random_port("tcp://*")
+            self.sync_port = self.sync_socket.bind_to_random_port("tcp://*")
+            self.async_port = self.sync_socket.bind_to_random_port("tcp://*")
             self.params = {}
-            self.params['port'] = self.port
+            self.params['port'] = self.sync_port
+            self.params['sync_port'] = self.sync_port
+            self.params['async_port'] = self.async_port
             self.params['frequency'] = 10
             self.params['name'] = name
             f = open(self._configFile, "w")
             f.write(json.dumps(self.params))
             f.close()
-
-        try:
-            self.params = json.load(f)
-            self.wsocket.bind("tcp://*:{0}".format(self.params['port']))
-        except Exception as e:
-            print(e)
-            return
+            need_create = False
+        if need_create:
+            try:
+                self.params = json.load(open(self._configFile, "r"))
+                print("1")
+                self.sync_socket.bind("tcp://*:{0}".format(self.params['port']))
+                print("2")
+                self.async_socket.bind("tcp://*:{0}".format(self.params['async_port']))
+                print("3")
+            except Exception as e:
+                print(e)
+                return
 
         self.ptimer.start()
-        print("Serving at {0}".format(self.params['port']))
+        print("Serving at sync {0} and async {1}".format(self.params['sync_port'], self.params['async_port']))
         self.start()
 
     def populate(self):
@@ -86,7 +96,7 @@ class Worker(threading.Thread):
 
     def add(self, data):
         self.data.append((time.time(), data))
-
+        self.async_socket.send_json(self.data[-1])
         if len(self.data) > 100:
             self.data = self.data[-100:]
 
@@ -109,7 +119,7 @@ class Worker(threading.Thread):
                     break
 
                 try:
-                    data = self.wsocket.recv(zmq.DONTWAIT).decode("utf8")
+                    data = self.sync_socket.recv(zmq.DONTWAIT).decode("utf8")
                 except:
                     time.sleep(0.001)
                     continue
@@ -136,25 +146,28 @@ class Worker(threading.Thread):
                 except Exception as e:
                     print(e)
                     sneddata = None
-                    self.wsocket.send_json(dict(status='wrong params'))
+                    self.sync_socket.send_json(dict(status='wrong params'))
                 try:
-                    self.wsocket.send_json(senddata)
+                    self.sync_socket.send_json(senddata)
                 except Exception as e:
                     print(e)
 
                 time.sleep(self.dt)
 
-            self.wsocket.close()
+            self.sync_socket.close()
             self.wcontext.term()
         except Exception as e:
             print(e)
-            self.wsocket.send_json(dict(status='error', error=str(e)))
+            self.sync_socket.send_json(dict(status='error', error=str(e)))
 
     def stop(self):
-        self.wsocket.setsockopt(zmq.LINGER, 0)
+        self.sync_socket.setsockopt(zmq.LINGER, 0)
+        self.async_socket.setsockopt(zmq.LINGER, 0)
+
         self.Estop.set()
         self.ptimer.cancel()
-
+        self.sync_socket.close()
+        self.async_socket.close()
 
 def mkPeriodicWorker(name, function, params={}, configFile=None):
     w = Worker(name, configFile)
