@@ -64,7 +64,7 @@ class ConnectorAsync(threading.Thread):
             except KeyboardInterrupt:
                 break
             if self.socket in socks:
-                tmp = self.socket.recv_json(zmq.DONTWAIT)
+                tmp = self.socket.recv_json()
                 if isinstance(tmp[0], float):
                     tmp = [[time.time(), tmp[0]], tmp[1]]
                 else:
