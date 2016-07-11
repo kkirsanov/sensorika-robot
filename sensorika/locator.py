@@ -18,6 +18,7 @@ from .tools import getLocalIp
 
 PORT = 15701
 
+
 class ThreadedConnector(threading.Thread):
     def __init__(self, ip, port, params=None, database=None, *args, **kwargs):
         threading.Thread.__init__(self, args=args, kwargs=args)
@@ -149,24 +150,34 @@ class Locator(threading.Thread):
             logging.error("port busy")
         self.programs = {}
         counter = 0
-
+        poller = zmq.Poller()
+        poller.register(socket, zmq.POLLIN)
         while not self.EStop.is_set():
             data = {}
             logging.debug('tick')
+
             try:
-                data = socket.recv_json(zmq.DONTWAIT)
-                print(data)
-            except Exception as e:
-                time.sleep(0.01)
+                socks = dict(poller.poll(1000))
+            except:
+                pass
+            if socket in socks:
+                try:
+                    data = socket.recv_json()
+                except Exception as e:
+                    print(e)
+                    continue
+            else:
                 continue
+
             logging.debug('Recive')
             try:
                 data['action']
             except:
                 data['action'] = 'ping'
             try:
+                answer = None
                 if data['action'] == 'register':
-                    print("registarting")
+                    print("registarting", data)
                     try:
                         data['location']
                     except:
@@ -182,14 +193,12 @@ class Locator(threading.Thread):
                         self.programs[data['name']] = dict(time=time.time(), params=data['params'])
                         self.programs[data['name']]['con'] = ThreadedConnector(data['ip'], data['port'],
                                                                                database=self.db, params=data['params'])
-                    socket.send_json(dict(status='ok'))
-                    continue
+                    answer = dict(status='ok')
                 if data['action'] == 'list':
                     d = []
                     for k, v in self.programs.items():
                         d.append(dict(name=k, data=v['params']))  # TODO: Fix, couse` ThreadedConnector is not json
-                    socket.send_json(d)
-                    continue
+                    answer = d
                 if data['action'] == 'getsessions':
                     df = None
                     dt = None
@@ -197,8 +206,8 @@ class Locator(threading.Thread):
                         df = data['df']
                     if 'dt' in data.keys():
                         dt = data['dt']
-                    socket.send_json(self.db.getSessions(datefrom=df, dateto=dt))
-                    continue
+                    answer = self.db.getSessions(datefrom=df, dateto=dt)
+
                 if data['action'] == 'getdata':
                     df = None
                     dt = None
@@ -209,8 +218,8 @@ class Locator(threading.Thread):
                         dt = data['dt']
                     if 'limit' in data.keys():
                         limit = data['limit']
-                    socket.send_json(self.db.getdata(name=data['name'], datefrom=df, dateto=dt, limit=limit))
-                    continue
+                    answer = self.db.getdata(name=data['name'], datefrom=df, dateto=dt, limit=limit)
+
                 if data['action'] == 'get':
                     if 'count' not in data.keys():
                         data['count'] = 1
@@ -220,21 +229,21 @@ class Locator(threading.Thread):
                         for k, v in self.programs.items():
                             tmp[k] = v['con'].data[-data['count']:]
                         print(tmp, self.programs)
-                        socket.send_json(dict(status='ok', data=tmp))
-                        continue
+                        answer = dict(status='ok', data=tmp)
                     else:
                         d = self.programs[data['name']]['con'].data[-data['count']:]
-                        socket.send_json(dict(status='ok', data=d))
-                        continue
+                        answer = dict(status='ok', data=d)
 
                 if data['action'] == 'ping':
-                    socket.send_json(dict(status='ok'))
-                    continue
-            except Exception as e:
-                socket.send_json(dict(status='fail', text=str(e)))
-                continue
+                    answer = dict(status='ok')
 
-            socket.send_json(dict(status='fail', text='wrong action'))
+            except Exception as e:
+                answer = dict(status='fail', text=str(e))
+
+            if answer:
+                socket.send_json(answer)
+            else:
+                socket.send_json(dict(status='fail', text='wrong action'))
 
         socket.close()
         context.term()
@@ -249,6 +258,7 @@ def serve():
     signal.signal(signal.SIGTERM, l.stop)
     print('Serving at {0}'.format(PORT))
     l.start()
+
 
 if __name__ == "__main__":
     serve()
