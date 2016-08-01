@@ -209,7 +209,7 @@ class Locator(threading.Thread):
             try:
                 answer = None
                 if data['action'] == 'register':
-                    print("registarting", data)
+
                     try:
                         data['location']
                     except:
@@ -230,7 +230,7 @@ class Locator(threading.Thread):
                     for k, v in self.programs.items():
                         d.append(dict(name=k, data=v['params']))  # TODO: Fix, couse` ThreadedConnector is not json
                     answer = d
-                if data['action'] == 'getsessions':
+                if data['action'] == 'listsessions':
                     df = None
                     dt = None
                     if 'df' in data.keys():
