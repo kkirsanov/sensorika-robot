@@ -178,8 +178,6 @@ def mkPeriodicWorker(name, function, params={}, configFile=None):
             w.add(result)
             tt = time.time() - t0
             time.sleep(spd - tt)
-            # print(result)
-
     t = threading.Thread(target=W)
     t.start()
     return w
