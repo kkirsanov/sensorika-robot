@@ -4,6 +4,10 @@ import subprocess
 import threading
 
 def getWifi():
+    """
+    dsasdfdsfdsfds
+    :return:
+    """
     z = subprocess.check_output(['iwconfig']).decode("utf8")
     a = z.split("\n")
     for x in a:
@@ -14,6 +18,7 @@ def getWifi():
             except:
                 return 0
     return 0
+
 
 
 import signal

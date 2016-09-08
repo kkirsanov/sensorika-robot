@@ -18,11 +18,11 @@ class Connector:
 
         self.Estop = threading.Event()
 
-    def get(self, dt=0.05):
+    def get(self, count=1, dt=0.05):
         if (self.t0 + dt > time.time()) and (self.dataReady):
             return self.cache
         else:
-            self.socket.send_json(dict(action='get', count=1))
+            self.socket.send_json(dict(action='get', count=count))
             self.cache = self.socket.recv_json()
             self.t0 = time.time()
             self.dataReady = True
