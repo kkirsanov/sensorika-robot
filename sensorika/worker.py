@@ -128,7 +128,15 @@ class Worker(threading.Thread):
                             senddata = dict(line=self.src_line)
 
                     if data['action'] == 'get':
-                        senddata = self.data[-1]
+                        try:
+                            count = data['count']
+                        except KeyError:
+                            count = 1
+                        if count == 1:
+                            senddata = self.data[-1]
+                        else:
+                            senddata = self.data[-count:]
+
                     if data['action'] == 'set':
                         self.command.append((time.time(), data['data']))
                         senddata = dict(status='ok')
