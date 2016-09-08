@@ -137,16 +137,7 @@ class SelectSession(QWidget):
                     except:
                         f.write(str(r[1]))
                     f.write("\n")
-
-
-
-
-
-
-
-
             else:
-
                 f = open(fname[0], "w")
                 f.write(json.dumps(res))
                 f.close()
@@ -170,7 +161,6 @@ class SelectSession(QWidget):
 
         self.export.clicked.connect(self.doExport)
         mainLayout.addStretch(2)
-
         self.setLayout(mainLayout)
 
 
