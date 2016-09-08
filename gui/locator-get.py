@@ -8,15 +8,10 @@ ip = '127.0.0.1'
 port = 15701
 socket.connect("tcp://" + ip + ":" + str(port))
 
-socket.send_json(dict(action='list'))
+socket.send_json(dict(action='listsessions'))
 d = socket.recv_json()
 print(d)
-
-socket.send_json(dict(action='get', count=10, name='wifi'))
-d = socket.recv_json()
-
-data = [val for times, val in d['data']]
-print(data)
+exit()
 
 import sys
 import os
