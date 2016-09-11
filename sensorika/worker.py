@@ -149,9 +149,8 @@ class Worker(threading.Thread):
                             self.command = self.command[-100:]
                         senddata = dict(status='ok')
                 except Exception as e:
-                    print(e)
-                    sneddata = None
                     self.sync_socket.send_json(dict(status='wrong params'))
+                    continue
                 try:
                     self.sync_socket.send_json(senddata)
                 except Exception as e:
