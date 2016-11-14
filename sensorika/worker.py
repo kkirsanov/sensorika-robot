@@ -76,6 +76,7 @@ class Worker(threading.Thread):
         sock.connect(s)
         if poller.poll(3 * 1000):  # 10s timeout in milliseconds
             sock.send_json(dict(action='register', name=self.name, port=self.params['port'],
+                                async_port=self.params['async_port'],
                                 ip=self.ns_ip, params=self.params))
         else:
             logging.error("No locator on {0}:{1}".format(self.ns_ip, 15701))

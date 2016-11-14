@@ -74,11 +74,13 @@ class ConnectorAsyncDB():
         self.db = database
         self.params = params
         self.data = []
+        self.name = params['name']
         self.db.statSession(params['name'])
-
+        print("NEW connector")
         self.connector = ConnectorAsync(ip, port, callback=self.add)
 
     def add(self, data):
+        print("adding data", self.params['name'])
         t, d = data
         canAdd = False
         if self.data:
@@ -206,6 +208,7 @@ class Locator(threading.Thread):
                 data['action']
             except:
                 data['action'] = 'ping'
+            print(data)
             try:
                 answer = None
                 if data['action'] == 'register':
@@ -214,16 +217,25 @@ class Locator(threading.Thread):
                         data['location']
                     except:
                         data['location'] = 'local'
+
                     if data['name'] in self.programs.keys():
                         if self.programs[data['name']]['port'] != data['port']:
                             self.programs[data['name']]['params'] = data['params']
                             self.programs[data['name']]['con'].stop()
                             self.programs[data['name']]['con'] = ConnectorAsyncDB(data['ip'], data['async_port'],
                                                                                   data['params'], self.db)
+
+
                     else:
-                        self.programs[data['name']] = dict(time=time.time(), params=data['params'])
-                        self.programs[data['name']]['con'] = ConnectorAsyncDB(data['ip'], data['async_port'],
-                                                                              data['params'], self.db)
+                        print("MKCON")
+                        try:
+                            self.programs[data['name']] = dict(time=time.time(), params=data['params'])
+                            self.programs[data['name']]['con'] = ConnectorAsyncDB(data['ip'], data['async_port'],
+                                                                                  data['params'], self.db)
+
+                        except Exception as e:
+                            print(e, "AAAAAA")
+
                     answer = dict(status='ok')
                 if data['action'] == 'list':
                     d = []
@@ -231,6 +243,7 @@ class Locator(threading.Thread):
                         d.append(dict(name=k, data=v['params']))  # TODO: Fix, couse` ThreadedConnector is not json
                     answer = d
                 if data['action'] == 'listsessions':
+
                     df = None
                     dt = None
                     if 'df' in data.keys():
@@ -252,14 +265,15 @@ class Locator(threading.Thread):
                     answer = self.db.getdata(name=data['name'], datefrom=df, dateto=dt, limit=limit)
 
                 if data['action'] == 'get':
+
                     if 'count' not in data.keys():
                         data['count'] = 1
                     if 'name' not in data.keys():
                         # get all data
                         tmp = dict()
+                        print("asd", self.programs.items())
                         for k, v in self.programs.items():
                             tmp[k] = v['con'].data[-data['count']:]
-                        print(tmp, self.programs)
                         answer = dict(status='ok', data=tmp)
                     else:
                         d = self.programs[data['name']]['con'].data[-data['count']:]
