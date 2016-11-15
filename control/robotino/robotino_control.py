@@ -74,7 +74,7 @@ class Joy(threading.Thread):
 
 
 from sensorika import Connector
-from sensorika.tools import list as nslist
+from sensorika.tools import nslist
 
 ns = "192.168.6.111"
 l = nslist(ns, "OmniDrive")[0]

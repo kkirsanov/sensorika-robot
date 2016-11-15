@@ -4,7 +4,7 @@ import zmq
 
 ctx = zmq.Context()
 socket = ctx.socket(zmq.REQ)
-ip = '127.0.0.1'
+ip = '192.168.6.111'
 port = 15701
 socket.connect("tcp://" + ip + ":" + str(port))
 

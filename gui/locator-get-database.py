@@ -2,28 +2,28 @@ from __future__ import unicode_literals
 
 import zmq
 
+import sys
+import os
+import matplotlib
+
+
 ctx = zmq.Context()
 socket = ctx.socket(zmq.REQ)
-ip = '127.0.0.1'
+ip = '192.168.6.111'
 port = 15701
 socket.connect("tcp://" + ip + ":" + str(port))
 
-socket.send_json(dict(action='list'))
+socket.send_json(dict(action='listsessions'))
 d = socket.recv_json()
-print(d)
 
-socket.send_json(dict(action='getdata', limit=100, name='wifi'))
+socket.send_json(dict(action='get', limit=10, name='Sensors'))
 data = socket.recv_json()
 
-for t, d in data:
+for t, d in data['data']:
     print(t[-1], d)
 # data = [val for times, val in d['data']]
 from pprint import pprint
 
-pprint(d)
-import sys
-import os
-import matplotlib
 
 # Make sure that we are using QT5
 matplotlib.use('Qt5Agg')
@@ -65,6 +65,9 @@ class MyDynamicMplCanvas(MyMplCanvas):
         timer = QtCore.QTimer(self)
         timer.timeout.connect(self.update_figure)
         timer.start(1000)
+        self.d1 = []
+        self.d2 = []
+        self.d3 = []
 
     def compute_initial_figure(self):
         self.axes.plot([0, 1, 2, 3], [1, 2, 0, 4], 'r')
@@ -72,20 +75,24 @@ class MyDynamicMplCanvas(MyMplCanvas):
     def update_figure(self):
         global socket
 
-        socket.send_json(dict(action='getdata', limit=1000, name='wifi'))
+        socket.send_json(dict(action='getdata', limit=20, name='Sensors'))
         data = socket.recv_json()
+        print(len(data), data)
         t1 = []
         t2 = []
         t3 = []
-        d1 = []
+        d1, d2, d3 = ([], [], [])
         for t, d in data:
             t1.append(t[-1])
             t2.append(t[-2])
             t3.append(t2[-1] - t1[-1])
-            d1.append(d)
-        # self.axes.plot(t1, 'r')
-        # self.axes.plot(t2, 'g')
-        self.axes.plot(t3, 'b')
+            d1.append(d['motors'][0]['position'])
+            d2.append(d['motors'][1]['position'])
+            d3.append(d['motors'][2]['position'])
+
+        self.axes.plot(d1, 'r')
+        self.axes.plot(d2, 'g')
+        self.axes.plot(d3, 'b')
         # self.axes.plot(a2, 'r')
         self.draw()
         import time

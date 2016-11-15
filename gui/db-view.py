@@ -62,7 +62,8 @@ class SelectLocator(QWidget):
         mainLayout = QVBoxLayout()
 
         self.locatorW = QListWidget()
-        locators = ['127.0.0.1']  # , '192.168.6.111']
+        #'127.0.0.1',
+        locators = ['192.168.6.111']
         self.locatorW.insertItems(0, locators)
 
         btnW = QPushButton('Connect')
@@ -77,8 +78,10 @@ class SelectLocator(QWidget):
 
 class SelectSession(QWidget):
     def update(self):
+
         self.glob.socket.send_json(dict(action='listsessions'))
         res = self.glob.socket.recv_json()
+        print(res,"asd")
         self.dates = set()
 
         self.lst.insertItems(0, [d + " " + name for d, name in res])
@@ -117,9 +120,9 @@ class SelectSession(QWidget):
 
             self.glob.socket.send_json(dict(action='getdata', name=n, limit=1000))
             res = self.glob.socket.recv_json()
-
+            print(res)
             if ('.csv' == fname[0][-4:]):
-                print(res[0])
+                #print(res[0])
                 f = open(fname[0], "w")
                 for i, t in enumerate(res[0][0]):
                     f.write('time {0};'.format(i))
