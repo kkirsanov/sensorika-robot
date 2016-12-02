@@ -165,9 +165,9 @@ class Locator(threading.Thread):
         self.db = DatabaserLEVELDB()
 
     def stop(self, *p1, **p2):
+        self.EStop.set()
         for k, v in self.programs.items():
             v['con'].stop()
-            self.EStop.set()
         self.db.close()
         print("STOP!")
 
